@@ -6,8 +6,8 @@ COMMON_SRC_PATH		:= $(COMMON_PATH)/Source
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := Hello_Triangle
-LOCAL_CFLAGS    += -DANDROID
+LOCAL_MODULE    := ESWrappers 
+LOCAL_CFLAGS    += -DANDROID -std=c99
 LOCAL_ARM_MODE	:= arm
 
 LOCAL_SRC_FILES := $(COMMON_SRC_PATH)/esShader.c \
@@ -24,7 +24,6 @@ LOCAL_C_INCLUDES	:= $(SRC_PATH) \
 					   $(COMMON_INC_PATH)
 				   
 LOCAL_LDLIBS    := -llog -landroid -lEGL -lGLESv3
-
 LOCAL_STATIC_LIBRARIES := android_native_app_glue
 
 include $(BUILD_SHARED_LIBRARY)
