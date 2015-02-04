@@ -1,0 +1,13 @@
+
+# binaries
+
+*.so
+*.o
+*.a
+*.dll
+
+$vimswap
+
+*.swp*
+
+build/*
