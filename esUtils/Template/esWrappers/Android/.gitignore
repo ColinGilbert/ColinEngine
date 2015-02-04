@@ -1,0 +1,6 @@
+./bin
+./obj
+./libs
+*.o
+*.so
+*.a
