@@ -1,10 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(esWrapper)
-
-include_directories(glad/build/include)
+project(gameEngine)
 
 add_subdirectory(glfw)
 
-add_executable(glfwWrapper glfwWrapper.c)
-target_link_libraries(glfwWrapper glfw ${GLFW_LIBRARIES})
+add_executable(editor desktop.c)
+target_link_libraries(editor glfw ${GLFW_LIBRARIES})
