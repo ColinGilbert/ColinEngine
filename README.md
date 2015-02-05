@@ -1,1 +1,1 @@
-This is my game, simulation, and presentation engine. It is written so as to be useful from the ground-up, and to avoid crappy abstractions.
+This is my game, simulation, and presentation engine. It is written so as to be useful from the ground-up, and to avoid crappy abstractions. Focus is on Mobile ES 3. Uses C99 (mostly for its restrict keyword) and C++11.
