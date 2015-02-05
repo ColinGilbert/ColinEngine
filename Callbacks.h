@@ -1,17 +1,15 @@
 #ifndef CALLBACKS_H
 #define CALLBACKS_H
 
-extern float WindowWidth, WindowHeight;
-extern void ExitApp();
-extern void OnStart();
-extern void OnStop();
-extern void OnDestroy();
-extern void OnDrawFrame();
-extern void OnTimer( float delta );
-extern void OnKey( int code, int state );
-extern void OnMouseDown( int btn, float x, float y);
-extern void OnMouseMove( float x, float y );
-extern void OnMouseUp( int btn, float x, float y );
-//extern void GenerateTicks();
+float WindowWidth, WindowHeight;
+void ExitApp();
+void StartRender();
+void StopRender();
+void Destroy();
+void DrawFrame();
+float Time( float since );
+void KeyEvent( int code, int state );
+void MouseEvent( int btn, float x, float y, short event_type);
+// void GenerateTicks();
 
 #endif

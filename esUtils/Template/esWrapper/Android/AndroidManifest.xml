@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" 
-    package="com.openglesbook.HelloTriangle">
+    package="net.noobwerkz.esWrapper">
     <application
-        android:label="HelloTriangle"
-        android:hasCode="false">
+        android:label="esWrapper"
+        android:hasCode="true">
          <activity android:name="android.app.NativeActivity"
-                android:label="HelloTriangle"
+                android:label="esWrapper"
                 android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
 				android:launchMode="singleTask"
                 android:configChanges="orientation|keyboardHidden">
             <meta-data android:name="android.app.lib_name" 
-                android:value="Hello_Triangle" />
+                android:value="esWrapper" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

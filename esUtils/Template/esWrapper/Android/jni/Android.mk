@@ -6,8 +6,9 @@ COMMON_SRC_PATH		:= $(COMMON_PATH)/Source
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := ESWrappers 
+LOCAL_MODULE    := esWrapper 
 LOCAL_CFLAGS    += -DANDROID -std=c99
+
 LOCAL_ARM_MODE	:= arm
 
 LOCAL_SRC_FILES := $(COMMON_SRC_PATH)/esShader.c \
@@ -15,7 +16,7 @@ LOCAL_SRC_FILES := $(COMMON_SRC_PATH)/esShader.c \
 				   $(COMMON_SRC_PATH)/esTransform.c \
 				   $(COMMON_SRC_PATH)/esUtil.c \
 				   $(COMMON_SRC_PATH)/Android/esUtil_Android.c \
-				   $(SRC_PATH)/esWrappers.c
+				   $(SRC_PATH)/esWrapper.c
 				   
 				   
 				   

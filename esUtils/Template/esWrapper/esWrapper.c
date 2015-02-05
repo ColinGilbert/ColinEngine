@@ -153,23 +153,23 @@ void Draw ( ESContext *esContext )
    glClear ( GL_COLOR_BUFFER_BIT );
 
    // Use the program object
-   glUseProgram ( userData->programObject );
+   glUseProgram( userData->programObject );
 
    // Load the vertex data
    glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vVertices );
    glEnableVertexAttribArray ( 0 );
 
-   glDrawArrays ( GL_TRIANGLES, 0, 3 );
+   glDrawArrays( GL_TRIANGLES, 0, 3 );
 }
 
-void Shutdown ( ESContext *esContext )
+void Shutdown( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
 
-   glDeleteProgram ( userData->programObject );
+   glDeleteProgram( userData->programObject );
 }
 
-int esMain ( ESContext *esContext )
+int esMain( ESContext *esContext )
 {
    esContext->userData = malloc ( sizeof ( UserData ) );
 
