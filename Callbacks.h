@@ -7,7 +7,7 @@ void StartRender();
 void StopRender();
 void Destroy();
 void DrawFrame();
-float Time( float since );
+float Time();
 void KeyEvent( int code, int state );
 void MouseEvent( int btn, float x, float y, short event_type);
 // void GenerateTicks();

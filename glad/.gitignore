@@ -1,0 +1,8 @@
+*.pyc
+*.xml
+*.kdev4
+build/
+*.o
+*.kdev_include_paths
+main.c
+*.diff

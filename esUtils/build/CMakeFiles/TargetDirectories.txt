@@ -1,2 +1,0 @@
-/home/noob/noobwerkz/esUtils/build/Template/esWrappers/CMakeFiles/esWrappers.dir
-/home/noob/noobwerkz/esUtils/build/Common/CMakeFiles/Common.dir

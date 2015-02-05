@@ -1,1 +1,0 @@
-/usr/bin/cc     CMakeFiles/esWrappers.dir/esWrappers.c.o  -o esWrappers -rdynamic ../../Common/libCommon.a -lGLESv2 -lEGL -lSM -lICE -lX11 -lXext -lm 
