@@ -6,8 +6,16 @@
 *.a
 *.dll
 
+**/bin
+**/obj
+**/libs
+
 #vimswap
 
 *.swp*
+*.sw*
+
+
+# common binary 
 
 build/*
