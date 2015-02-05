@@ -1,10 +1,10 @@
 
 # binaries
 
-*.so
-*.o
-*.a
-*.dll
+*.so*
+*.o*
+*.a*
+*.dll*
 
 **/bin
 **/obj
@@ -12,8 +12,8 @@
 
 #vimswap
 
-*.swp*
-*.sw*
+**/.*.swp*
+**/.*.sw*
 
 
 # common binary 
