@@ -1,1 +1,1 @@
-rm -rf ./bin ./libs ./obj
+rm -rf ./bin ./obj ./libs

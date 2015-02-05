@@ -1,4 +1,4 @@
-# Copyright 2013 The Android Open Source Project
+# Copyright (C) 2010 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,17 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-LOCAL_PATH:= $(call my-dir)
+#
+LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
-LOCAL_ARM_MODE  := arm
-LOCAL_MODULE    := libgles3jni
-LOCAL_CFLAGS    := -Werror
-LOCAL_SRC_FILES := gles3jni.cpp \
-				   RendererES2.cpp \
-				   RendererES3.cpp
-LOCAL_LDLIBS    := -llog -lGLESv3 -lEGL
-#LOCAL_STATIC_LIVS := android_native_glue
+
+LOCAL_MODULE    := native-activity
+LOCAL_SRC_FILES := main.c
+LOCAL_LDLIBS    := -llog -landroid -lEGL -lGLESv1_CM
+LOCAL_STATIC_LIBRARIES := android_native_app_glue
+
 include $(BUILD_SHARED_LIBRARY)
-#(call import-module, android_native_glue.h)
+
+$(call import-module,android/native_app_glue)
