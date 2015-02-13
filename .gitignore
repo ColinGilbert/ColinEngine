@@ -21,7 +21,8 @@ desktop/*
 !android/jni/Android.mk
 !android/jni/Application.mk
 !android/jni/main.c*
-
+editor
+clister
 *.dll*
 *.o*
 *.a*
