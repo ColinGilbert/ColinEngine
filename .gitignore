@@ -4,6 +4,7 @@ build
 **/obj
 **/libs
 **/bin
+**/assets
 
 engine/extern/*
 
@@ -13,9 +14,9 @@ engine/extern/*
 android/jni/*
 desktop/*
 
+!desktop/CMakeLists.txt
 !desktop/desktop.c*
-!desktop/gl_utils.h
-!desktop/gl_utils.cpp
+!desktop/gl_utils.*
 !**/platform_crap.h
 !android/jni/Android.mk
 !android/jni/Application.mk
