@@ -1,8 +1,0 @@
-# In case you're wondering, this code cleans up build dirs and copies over the right files into platform-specific folders.
-
-# Warning: Code within is extremely hacky, and probably unusable from anything other than *nix platforms. I have no way of knowing if it contains any bashisms but frankly I do not care as this code works on my setup and this is just temp. work.
-
-
-# Core engine 
-cp -R ./engine ./desktop &&
-cp -R ./engine ./android/jni
