@@ -1,0 +1,4 @@
+rm -rf android/bin/* &&
+rm -rf android/obj/* &&
+rm -rf android/libs/* &&
+rm -rf desktop/build/*
