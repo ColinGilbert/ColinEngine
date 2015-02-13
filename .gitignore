@@ -1,0 +1,8 @@
+**/build
+**/build
+**/obj
+**/libs
+**/bin
+extern/*
+.git
+*sw*

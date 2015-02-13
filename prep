@@ -1,0 +1,55 @@
+# In case you're wondering, this code cleans up build dirs and copies over the right files into platform-specific folders.
+
+# Warning: Code within is extremely hacky, and probably unusable from anything other than *nix platforms. I have no way of knowing if it contains any bashisms but frankly I do not care as this code works on my setup and this is just temp. work.
+
+
+rm -rf android/bin/* &&
+rm -rf android/obj/* &&
+rm -rf android/libs/* &&
+rm -rf build/* &&
+rm -rf desktop/build/* &&
+rm -rf android/jni/Engine &&
+rm -rf desktop/Engine &&
+#rm -rf android/jni/stb/* &&
+#rm -rf desktop/stb/* &&
+
+# General engine structure
+#cp -R ./Engine ./android/jni &&
+#cp -R ./Engine ./desktop &&
+
+# All core engine Colin Goodness
+cp -R ./engine ./desktop &&
+cp -R ./engine ./android/jni &&
+
+# libpd
+cp -R ./extern/libpd ./desktop &&
+cp -R ./extern/libpd ./android/jni &&
+
+#gl_utils for logging on desktop
+cp ./extern/gl_utils.* ./desktop &&
+
+# glfw
+cp -R ./extern/glfw ./desktop/cmakeables/glfw &&
+
+# enet
+cp -R ./extern/enet ./desktop/cmakeables &&
+cp -R ./extern/enet ./android/jni &&
+
+# nanovg
+cp -R ./extern/nanovg/src/* ./desktop/nanovg &&
+cp -R ./extern/nanovg/src/* ./android/jni/nanovg &&
+
+#stb
+cp ./extern/stb/*.c ./android/jni/stb &&
+cp ./extern/stb/*.h ./android/jni/stb &&
+
+#cp -R ./ozz-animation ./desktop/cmakeables &&
+#cp -R ./ozz-animation ./android/jni &&
+
+# File assets
+cp -R ./assets/* ./desktop/assets/ &&
+cp -R ./assets/* ./android/assets/ &&
+
+# Callbacks
+cp ./user/user_callbacks.h ./desktop/user_callbacks.h &&
+cp ./user/user_callbacks.h ./android/jni/user_callbacks.h
