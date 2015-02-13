@@ -1,0 +1,5 @@
+cp user/user_callbacks.h android/jni/ &&
+cp user/user_callbacks.h desktop
+
+cp -R engine/* desktop/engine
+cp -R engine/* android/jni/engine

@@ -46,10 +46,13 @@ void renderer_init_callback()
 }
 
 void renderer_start_callback() {}
+void renderer_start() {}
 
 void renderer_stop_callback() {}
+void renderer_stop() {}
 
 void renderer_resize_callback(float width, float height) {}
+// void renderer_resize(bool force) {} // Needed?
 
 void renderer_destroy_callback() {}
 
@@ -69,3 +72,6 @@ void key_event_callback(int code, int state) {}
 
 void cursor_event_callback(float x, float y, short event_type) {}
 
+void log_event_callback(const char* str, unsigned int len, ...) {}
+
+void log_event(const char* str, unsigned int len, ...) {}

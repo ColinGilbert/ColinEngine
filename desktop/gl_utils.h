@@ -8,11 +8,12 @@
 \******************************************************************************/
 #ifndef _GL_UTILS_H_
 #define _GL_UTILS_H_
-// #include <GL/glew.h> // include GLEW and new version of GL on Windows
-#include <GLFW/glfw3.h> // GLFW helper library
-#include <stdarg.h>
 
-#define GL_LOG_FILE "gl.log"
+#if defined( _WIN32 )
+include <GL/glew.h> // include GLEW and new version of GL on Windows
+#endif
+#include <GLFW/glfw3.h> // GLFW helper library
+
 
 extern int g_gl_width;
 extern int g_gl_height;
