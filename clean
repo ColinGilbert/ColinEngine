@@ -1,4 +1,8 @@
 rm -rf android/bin/* &&
 rm -rf android/obj/* &&
 rm -rf android/libs/* &&
-rm -rf desktop/build/*
+rm -rf desktop/build/* &&
+rm -rf desktop/engine/* &&
+rm -rf android/jni/engine/* &&
+rm -rf android/assets/* &&
+rm -rf desktop/assets/*
