@@ -3,12 +3,12 @@
 
 namespace atomic_counter
 {
-	template <class T> inline T  increment( T* Value )
+	template <class T> inline T  increment( T* value )
 	{
 		return ++count.load();
 	}
 
-	template <class T> inline T decrement( T* Value )
+	template <class T> inline T decrement( T* value )
 	{
 		return --count.load();
 	}

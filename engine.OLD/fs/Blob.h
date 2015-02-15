@@ -125,7 +125,7 @@ public:
 	}
 
 	/// Ensure there is enough space for the byte array
-	bool safe_setbytes( size_t offset, size_t num, const char* src )
+	bool safe_set_bytes( size_t offset, size_t num, const char* src )
 	{
 		if ( offset + num > file_size )
 		{
@@ -239,7 +239,7 @@ public:
 	void write_byte( char data ) { set_byte( file_current_pos, data ); file_current_pos++; }
 
 	void read_bytes( char* out, size_t num ) { get_bytes( file_current_pos, num, out ); file_current_pos += num; }
-	void write_bytes( const char* src, size_t num ) { if ( safe_setbytes( file_current_pos, num, src ) ) { file_current_pos += num; } }
+	void write_bytes( const char* src, size_t num ) { if ( safe_set_bytes( file_current_pos, num, src ) ) { file_current_pos += num; } }
 
 	/// Current read/write position
 	size_t file_current_pos;

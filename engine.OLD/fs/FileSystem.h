@@ -17,7 +17,7 @@ public:
 	refcounting_ptr<intrusive_inputstream> reader_from_memory( const void* buffer_ptr, uint64_t buffer_size, bool owns_data ) const;
 	refcounting_ptr<intrusive_inputstream> reader_from_blob( const refcounting_ptr<blob>& Blob ) const;
 
-	refcounting_ptr<blob> LoadFileAsBlob( const std::string& name ) const
+	refcounting_ptr<blob> load_file_as_blob( const std::string& name ) const
 	{
 	refcounting_ptr<intrusive_inputstream> input = create_reader( name );
 	refcounting_ptr<blob> resource = new blob();
@@ -32,18 +32,18 @@ public:
 	std::string virtual_name_to_physical( const std::string& path ) const;
 	bool file_exists( const std::string& name ) const;
 private:
-	refcounting_ptr<intrusive_mountpoint> find_mountpoint_by_name( const std::string& path );
+	std::weak_ptr<intrusive_mountpoint> find_mountpoint_by_name( const std::string& path );
 	/// Search for a mount point for this file
 	refcounting_ptr<intrusive_mountpoint> find_mountpoint( const std::string& filename ) const;
 	std::vector< refcounting_ptr<intrusive_mountpoint> > mountpoints;
 };
 
-inline refcounting_ptr<memfile_writer> create_memwriter( const std::string& filename, uint64_t initial_size )
+inline shared_ptr<memfile_writer> create_memwriter( const std::string& filename, uint64_t initial_size )
 {
-	refcounting_ptr<blob> B = new blob();
+	std::unique_ptr<blob> B = new blob();
 	B->set_size( static_cast<size_t>( initial_size ) );
 
-	refcounting_ptr<memfile_writer> stream = new memfile_writer( B );
+	std::shared_ptr<memfile_writer> stream = new memfile_writer( B );
 	stream->set_maxsize( initial_size * 2 ); // default value
 	stream->set_filename( filename );
 

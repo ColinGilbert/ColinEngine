@@ -14,13 +14,13 @@ template <typename T> class ring_buffer
 public:
 	explicit ring_buffer(size_t capacity): frame_buffer(capacity) { clear(); }
 
-	inline void push_back(const T& Value)
+	inline void push_back(const T& value)
 	{
 		if (frame_count < frame_buffer.size())
 			frame_count++;
 
 		// fill linear buffer
-		frame_buffer[frame_head++] = Value;
+		frame_buffer[frame_head++] = value;
 
 		// wrap around
 		if (frame_head == frame_buffer.size())
@@ -34,7 +34,7 @@ public:
 
 	inline T* prev(size_t i)
 	{
-		return ( i >= frame_count ) ? NULL : &frame_buffer[ adjust_index( i ) ];
+		return ( i >= frame_count ) ? nullptr : &frame_buffer[ adjust_index( i ) ];
 	}
 
 	inline size_t adjust_index(size_t i) const
@@ -43,7 +43,7 @@ public:
 	}
 
 private:
-	// note: This does NOT necessarily mean a video frame buffer. Keep in mind this is for any kind of buffer forwarding frames of information.
+	// Note: This does NOT necessarily mean a video frame buffer. Keep in mind this is for any kind of buffer forwarding frames of information.
 	std::vector<T> frame_buffer;
-	size_t     frame_count, frame_head;
+	size_t frame_count, frame_head;
 };
