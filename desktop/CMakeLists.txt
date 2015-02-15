@@ -5,7 +5,7 @@ set(CMAKE_C_FLAGS "-std=c99")
 
 project(gameEngine)
 
-add_subdirectory(glfw)
+add_subdirectory(engine)
 
-add_executable(editor desktop.c) 
+add_executable(editor desktop.cpp) 
 target_link_libraries(editor glfw ${GLFW_LIBRARIES} enet ${ENET_LIBRARIES} )

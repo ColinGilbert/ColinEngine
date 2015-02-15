@@ -1,6 +1,6 @@
 #include "FileSystem.h"
 #include "Files.h"
-#include "MountPoint.h"
+#include "mountpoint.h"
 #include "Archive.h"
 
 #include "Blob.h"
@@ -15,126 +15,126 @@
 #  include <stdlib.h>
 #endif
 
-clPtr<iIStream> clFileSystem::CreateReader( const std::string& FileName ) const
+refcounting_ptr<intrusive_input_stream> abstract_file_system::create_reader( const std::string& filename ) const
 {
-	std::string Name = Arch_FixFileName( FileName );
+	std::string name = arch_fix_filename( filename );
 
-	clPtr<iMountPoint> MountPoint = FindMountPoint( Name );
-	clPtr<iRawFile> RAWFile = MountPoint->CreateReader( Name );
+	refcounting_ptr<intrusive_mountpoint> mountpoint = find_mountpoint( name );
+	refcounting_ptr<intrusive_raw_file> RAWFile = mountpoint->create_reader( name );
 
-	if ( !RAWFile->GetFileData() ) { LOGI( "ERROR: unable to load file %s\n", FileName.c_str() ); }
+	if ( !RAWFile->get_file_data() ) { LOGI( "ERROR: unable to load file %s\n", filename.c_str() ); }
 
-	return new FileMapper( RAWFile );
+	return new file_mapper( RAWFile );
 }
 
-clPtr<iIStream> clFileSystem::ReaderFromString( const std::string& Str ) const
+refcounting_ptr<intrusive_input_stream> abstract_file_system::reader_from_string( const std::string& Str ) const
 {
-	MemRawFile* RawFile = new MemRawFile();
-	RawFile->CreateFromString( Str );
-	return new FileMapper( RawFile );
+	mem_rawfile* raw_file = new mem_rawfile();
+	raw_file->create_from_strings( Str );
+	return new file_mapper( raw_file );
 }
 
-clPtr<iIStream> clFileSystem::ReaderFromMemory( const void* BufPtr, uint64 BufSize, bool OwnsData ) const
+refcounting_ptr<intrusive_input_stream> abstract_file_system::reader_from_memory( const void* buffer_size, uint64_t BufSize, bool owns_data ) const
 {
-	MemRawFile* RawFile = new MemRawFile();
-	OwnsData ? RawFile->CreateFromBuffer( BufPtr, BufSize ) : RawFile->CreateFromManagedBuffer( BufPtr, BufSize );
-	return new FileMapper( RawFile );
+	mem_rawfile* raw_file = new mem_rawfile();
+	owns_data ? raw_file->create_from_buffer( buffer_size, BufSize ) : raw_file->create_from_managed_buffer( buffer_size, BufSize );
+	return new file_mapper( raw_file );
 }
 
-clPtr<iIStream> clFileSystem::ReaderFromBlob( const clPtr<clBlob>& Blob ) const
+refcounting_ptr<intrusive_input_stream> abstract_file_system::reader_from_blob( const refcounting_ptr<clBlob>& Blob ) const
 {
-	ManagedMemRawFile* RawFile = new ManagedMemRawFile();
-	RawFile->SetBlob( Blob );
-	return new FileMapper( RawFile );
+	managed_mem_rawfile* raw_file = new managed_mem_rawfile();
+	raw_file->set_blob( Blob );
+	return new file_mapper( raw_file );
 }
 
-bool clFileSystem::FileExists( const std::string& Name ) const
+bool abstract_file_system::file_exists( const std::string& name ) const
 {
-	if ( Name.empty() || Name == "." ) { return false; }
+	if ( name.empty() || name == "." ) { return false; }
 
-	clPtr<iMountPoint> MPD = FindMountPoint( Name );
-	return MPD ? MPD->FileExists( Name ) : false;
+	refcounting_ptr<intrusive_mountpoint> mount_point_dir = find_mountpoint( name );
+	return mount_point_dir ? mount_point_dir->file_exists( name ) : false;
 }
 
-std::string clFileSystem::VirtualNameToPhysical( const std::string& Path ) const
+std::string abstract_file_system::virtual_name_to_physical( const std::string& path ) const
 {
-	if ( FS_IsFullPath( Path ) ) { return Path; }
+	if ( is_full_path( path ) ) { return path; }
 
-	clPtr<iMountPoint> MP = FindMountPoint( Path );
-	return ( !MP ) ? Path : MP->MapName( Path );
+	refcounting_ptr<intrusive_mountpoint> MP = find_mountpoint( path );
+	return ( !MP ) ? path : MP->map_name( path );
 }
 
-void clFileSystem::Mount( const std::string& PhysicalPath )
+void abstract_file_system::mount( const std::string& physical_path )
 {
-	clPtr<iMountPoint> MPD = NULL;
+	refcounting_ptr<intrusive_mountpoint> mount_point_dir = nullptr;
 
-	if ( PhysicalPath.find( ".apk" ) != std::string::npos || PhysicalPath.find( ".zip" ) != std::string::npos )
+	if ( physical_path.find( ".apk" ) != std::string::npos || physical_path.find( ".zip" ) != std::string::npos )
 	{
-		clPtr<ArchiveReader> Reader = new ArchiveReader();
+		refcounting_ptr<archive_reader> reader = new archive_reader();
 
-		Reader->OpenArchive( CreateReader( PhysicalPath ) );
+		reader->open_archive( create_reader( physical_path ) );
 
-		MPD = new ArchiveMountPoint( Reader );
+		mount_point_dir = new archive_mountpoint( reader );
 	}
 	else
 	{
 #if !defined( OS_ANDROID )
 
-		if ( !FS_FileExistsPhys( PhysicalPath ) )
+		if ( !physical_file_exists( physical_path ) )
 		{
-			// WARNING: "Unable to mount: '" + PhysicalPath + "' not found"
+			// WARNING: "Unable to mount: '" + physical_path + "' not found"
 			return;
 		}
 
 #endif
-		MPD = new PhysicalMountPoint( PhysicalPath );
+		mount_point_dir = new physical_mountpoint( physical_path );
 	}
 
-	if ( MPD )
+	if ( mount_point_dir )
 	{
-		MPD->SetName( PhysicalPath );
-		AddMountPoint( MPD );
+		mount_point_dir->Setname( physical_path );
+		add_mountpoint( mount_point_dir );
 	}
 }
 
-void clFileSystem::AddAliasMountPoint( const std::string& SrcPath, const std::string& AliasPrefix )
+void abstract_file_system::add_alias( const std::string& src_path, const std::string& alias_prefix )
 {
-	clPtr<iMountPoint> MP = FindMountPointByName( SrcPath );
+	refcounting_ptr<intrusive_mountpoint> MP = find_mountpoint_by_name( src_path );
 
 	if ( !MP ) { return; }
 
-	clPtr<AliasMountPoint> AMP = new AliasMountPoint( MP );
-	AMP->SetAlias( AliasPrefix );
-	AddMountPoint( AMP );
+	refcounting_ptr<alias_mountpoint> AMP = new alias_mountpoint( MP );
+	AMP->set_alias( alias_prefix );
+	add_mountpoint( AMP );
 }
 
-clPtr<iMountPoint> clFileSystem::FindMountPointByName( const std::string& ThePath )
+refcounting_ptr<intrusive_mountpoint> abstract_file_system::find_mountpoint_by_name( const std::string& path_arg )
 {
-	for ( size_t i = 0 ; i != FMountPoints.size() ; i++ )
-		if ( FMountPoints[i]->GetName() == ThePath ) { return FMountPoints[i]; }
+	for ( size_t i = 0 ; i != file_mountpoints.size() ; i++ )
+		if ( file_mountpoints[i]->get_name() == path_arg ) { return file_mountpoints[i]; }
 
-	return NULL;
+	return nullptr;
 }
 
-void clFileSystem::AddMountPoint( const clPtr<iMountPoint>& MP )
+void abstract_file_system::add_mountpoint( const refcounting_ptr<intrusive_mountpoint>& MP )
 {
 	if ( !MP ) { return; }
 
-	if ( std::find( FMountPoints.begin(), FMountPoints.end(), MP ) == FMountPoints.end() ) { FMountPoints.push_back( MP ); }
+	if ( std::find( file_mountpoints.begin(), file_mountpoints.end(), MP ) == file_mountpoints.end() ) { file_mountpoints.push_back( MP ); }
 }
 
-clPtr<iMountPoint> clFileSystem::FindMountPoint( const std::string& FileName ) const
+refcounting_ptr<intrusive_mountpoint> abstract_file_system::find_mountpoint( const std::string& filename ) const
 {
-	if ( FMountPoints.empty() ) { return NULL; }
+	if ( file_mountpoints.empty() ) { return nullptr; }
 
-	if ( ( *FMountPoints.begin() )->FileExists( FileName ) )
+	if ( ( *file_mountpoints.begin() )->file_exists( filename ) )
 	{
-		return ( *FMountPoints.begin() );
+		return ( *file_mountpoints.begin() );
 	}
 
 	// reverse order
-	for ( std::vector<clPtr<iMountPoint> >::const_reverse_iterator i = FMountPoints.rbegin(); i != FMountPoints.rend(); ++i )
-		if ( ( *i )->FileExists( FileName ) ) { return ( *i ); }
+	for ( std::vector<refcounting_ptr<intrusive_mountpoint> >::const_reverse_iterator i = file_mountpoints.rbegin(); i != file_mountpoints.rend(); ++i )
+		if ( ( *i )->file_exists( filename ) ) { return ( *i ); }
 
-	return *( FMountPoints.begin() );
+	return *( file_mountpoints.begin() );
 }

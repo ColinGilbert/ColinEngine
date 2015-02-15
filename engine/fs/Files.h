@@ -1,387 +1,324 @@
+/*
+Potential excercise: template this beautiful mess
+*/
 #pragma once
 
 #include "Streams.h"
 #include "Blob.h"
 
-#ifdef _WIN32
-#  include <windows.h>
-#else
-#  include <sys/types.h>
-#  include <sys/stat.h>
-#  include <sys/mman.h>
-#  include <fcntl.h>
-#  include <errno.h>
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-class iRawFile: public iObject
+class intrusive_rawfile: public intrusive_object
 {
 public:
-	iRawFile() {};
-	virtual ~iRawFile() {};
+	intrusive_rawfile() {};
+	virtual ~intrusive_rawfile() {};
 
-	void       SetVirtualFileName( const std::string& VFName ) { FVirtualFileName = VFName; }
-	void       SetFileName( const std::string& FName )         { FFileName        = FName;  }
+	void set_virtual_filename( const std::string& vname ) { virtual_filename = vname; }
+	void set_filename( const std::string& name ) { filename = name; }
 
-	std::string    GetVirtualFileName() const { return FVirtualFileName; }
-	std::string    GetFileName()        const { return FFileName; }
+	std::string get_virtual_filename() const { return virtual_filename; }
+	std::string get_filename() const { return filename; }
 
-	virtual const ubyte*    GetFileData() const = 0;
-	virtual uint64          GetFileSize() const = 0;
+	virtual const char* get_filedata() const = 0;
+	virtual uint64_t get_filesize() const = 0;
 protected:
-	std::string    FFileName;
-	std::string    FVirtualFileName;
+	std::string filename;
+	std::string virtual_filename;
 };
 
 /// Physical file representation
-class RawFile: public iRawFile
+class raw_file: public intrusive_rawfile
 {
 public:
-	RawFile() {}
-	virtual ~RawFile() { Close(); }
+	raw_file() {}
+	virtual ~raw_file() { close(); }
 
-	bool Open( const std::string& FileName, const std::string& VirtualFileName )
+	bool open( const std::string& filename, const std::string& virtual_filename )
 	{
-		SetFileName( FileName );
-		SetVirtualFileName( VirtualFileName );
+		set_filename( filename );
+		set_virtual_filename( virtual_filename );
 
-		FSize = 0;
-		FFileData = NULL;
+		file_size = 0;
+		file_data = nullptr;
+		file_handle = open( file_name.c_str(), O_RDONLY );
 
-#ifdef _WIN32
-		FMapFile = CreateFileA( FFileName.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-		                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS, NULL );
-		// FMapFile == INVALID_HANDLE_VALUE ?
-#else
-		FFileHandle = open( FileName.c_str(), O_RDONLY );
-#endif
-
-#ifdef _WIN32
-		FMapHandle = CreateFileMapping( FMapFile, NULL, PAGE_READONLY, 0, 0, NULL );
-		FFileData = ( ubyte* )MapViewOfFile( FMapHandle, FILE_MAP_READ, 0, 0, 0 );
-
-		DWORD dwSizeLow = 0, dwSizeHigh = 0;
-		dwSizeLow = ::GetFileSize( FMapFile, &dwSizeHigh );
-		FSize = ( ( uint64 )dwSizeHigh << 32 ) | ( uint64 )dwSizeLow;
-#else
-		struct stat FileInfo;
-		fstat( FFileHandle, &FileInfo );
+		struct stat file_info;
+		fstat( file_handle, &file_info );
 		// Optionally check strerror( errno ), if fstat returns -1
 
-		FSize = static_cast<uint64>( FileInfo.st_size );
+		file_size = static_cast<uint64_t>( file_info.st_size );
 
 		// don't call mmap() for zero-sized files
-		if ( FSize )
+		if ( file_size )
 		{
 			// create share/read-only file mapping
-			FFileData = ( ubyte* )( mmap( NULL, FSize, PROT_READ, MAP_PRIVATE, FFileHandle, 0 ) );
+			file_data = ( char* )( mmap( nullptr, file_size, PROT_READ, MAP_PRIVATE, file_handle, 0 ) );
 		}
 
-		close( FFileHandle );
-#endif
+		close( file_handle );
+
 		return true;
 	}
 
-	void Close()
+	void close()
 	{
-#ifdef _WIN32
-
-		if ( FFileData  ) { UnmapViewOfFile( FFileData ); }
-
-		if ( FMapHandle ) { CloseHandle( ( HANDLE )FMapHandle ); }
-
-		CloseHandle( ( HANDLE )FMapFile );
-#else
-
-		if ( FFileData ) { munmap( reinterpret_cast<void*>( FFileData ), FSize ); }
-
-#endif
+		if ( file_data ) { munmap( reinterpret_cast<void*>( file_data ), file_size ); }
 	}
 
-	virtual const ubyte* GetFileData()        const { return FFileData; }
-	virtual uint64       GetFileSize()        const { return FSize;     }
+	virtual const char* get_filedata() const { return file_data; }
+	virtual uint64_t get_filesize() const { return file_size; }
 private:
-#ifdef _WIN32
-	HANDLE     FMapFile;
-	HANDLE     FMapHandle;
-#else
-	int        FFileHandle;
-#endif
-	ubyte*    FFileData;
-	uint64    FSize;
+
+	int file_handle;
+
+	char* file_data;
+	uint64_t file_size;
 };
 
-class MemRawFile: public iRawFile
+class mem_rawfile: public intrusive_rawfile
 {
 public:
-	MemRawFile()
+	mem_rawfile()
 	{
-		FBuffer      = NULL;
-		FBufferSize  = 0;
-		FOwnsBuffer  = false;
+		buffer = nullptr;
+		buffer_size = 0;
+		owns_buffer = false;
 	}
 
-	virtual ~MemRawFile() { DeleteBuffer(); }
+	virtual ~mem_rawfile() { delete_buffer(); }
 
-	virtual const ubyte* GetFileData() const { return reinterpret_cast<const ubyte*>( FBuffer ); }
-	virtual uint64       GetFileSize() const { return FBufferSize; }
+	virtual const char* get_filedata() const { return reinterpret_cast<const char*>( buffer ); }
+	virtual uint64_t get_filesize() const { return buffer_size; }
 
-	void CreateFromString( const std::string& InString )
+	void create_from_string( const std::string& input_string )
 	{
-		DeleteBuffer();
-		FBufferSize = InString.length();
+		delete_buffer();
+		buffer_size = input_string.length();
 
-		if ( !InString.empty() )
+		if ( !input_string.empty() )
 		{
-			char* LocalBuffer = new char[ InString.length() ];
-			memcpy( LocalBuffer, InString.c_str(), static_cast<size_t>( FBufferSize ) );
-			FBuffer = LocalBuffer;
-			FOwnsBuffer = true;
+			char* local_buffer = new char[ input_string.length() ];
+			memcpy( local_buffer, input_string.c_str(), static_cast<size_t>( buffer_size ) );
+			buffer = local_buffer;
+			owns_buffer = true;
 		}
 	}
 
-	void CreateFromBuffer( const void* BufPtr, uint64 BufSize )
+	void create_from_buffer( const void* buffer_ptr, uint64_t buffer_size )
 	{
-		DeleteBuffer();
-		FBuffer     = BufPtr;
-		FBufferSize = BufSize;
-		FOwnsBuffer = true;
+		delete_buffer();
+		buffer = buffer_ptr;
+		buffer_size = buffer_size;
+		owns_buffer = true;
 	}
 
-	void CreateFromManagedBuffer( const void* BufPtr, uint64 BufSize )
+	void create_from_managed_buffer( const void* buffer_ptr, uint64_t buffer_size )
 	{
-		DeleteBuffer();
-		FBuffer     = BufPtr;
-		FBufferSize = BufSize;
-		FOwnsBuffer = false;
+		delete_buffer();
+		buffer = buffer_ptr;
+		buffer_size = buffer_size;
+		owns_buffer = false;
 	}
 
 private:
-	void DeleteBuffer()
+	void delete_buffer()
 	{
-		if ( FBuffer )
+		if ( buffer )
 		{
-			if ( FOwnsBuffer )
+			if ( owns_buffer )
 			{
-				delete [] reinterpret_cast<const char*>( FBuffer );
+				delete [] reinterpret_cast<const char*>( buffer );
 			}
 
-			FBuffer = NULL;
+			buffer = nullptr;
 		}
 	}
 
 	// do we own the buffer ?
-	bool           FOwnsBuffer;
-	const void*    FBuffer;
-	uint64        FBufferSize;
+	bool owns_buffer;
+	const void* buffer;
+	uint64_t buffer_size;
 };
 
-class ManagedMemRawFile: public iRawFile
+class managed_inmem_rawfile: public intrusive_rawfile
 {
 public:
-	ManagedMemRawFile(): FBlob( NULL ) {}
+	managed_inmem_rawfile(): file_blob( nullptr ) {}
 
-	virtual const ubyte* GetFileData() const { return ( const ubyte* )FBlob->GetData(); }
-	virtual uint64       GetFileSize() const { return FBlob->GetSize(); }
+	virtual const char* get_filedata() const { return ( const char* )file_blob->get_data(); }
+	virtual uint64_t get_filesize() const { return file_blob->get_size(); }
 
-	void SetBlob( const clPtr<clBlob>& Ptr ) { FBlob = Ptr; }
+	void set_blob( const refcounting_ptr<blob>& ptr ) { file_blob = ptr; }
 private:
-	clPtr<clBlob> FBlob;
+	refcounting_ptr<blob> file_blob;
 };
 
-class FileMapper: public iIStream
+class file_mapper: public intrusive_inputstream
 {
 public:
-	FileMapper( clPtr<iRawFile> File ): FFile( File ), FPosition( 0 ) {}
-	virtual ~FileMapper() {}
+	file_mapper( refcounting_ptr<intrusive_rawfile> File ): file( File ), position( 0 ) {}
+	virtual ~file_mapper() {}
 
-	virtual std::string  GetVirtualFileName() const { return FFile->GetVirtualFileName(); }
-	virtual std::string  GetFileName() const { return FFile->GetFileName(); }
-	virtual uint64       Read( void* Buf, uint64 Size )
+	virtual std::string get_virtual_filename() const { return file->get_virtual_filename(); }
+	virtual std::string get_filename() const { return file->get_filename(); }
+	virtual uint64_t read( void* buf, uint64_t size )
 	{
-		uint64 RealSize = ( Size > GetBytesLeft() ) ? GetBytesLeft() : Size;
-
-		memcpy( Buf, ( FFile->GetFileData() + FPosition ), static_cast<size_t>( RealSize ) );
-
-		FPosition += RealSize;
-
-		return RealSize;
+		uint64_t real_size = ( size > get_bytes_remaining() ) ? get_bytes_remaining() : size;
+		memcpy( buf, ( file->get_filedata() + position ), static_cast<size_t>( real_size ) );
+		position += real_size;
+		return real_size;
 	}
 
-	virtual void         Seek( const uint64 Position )     { FPosition  = Position; }
+	virtual void seek( const uint64_t seek_position ){ position = seek_position; }
 
-	virtual uint64       GetSize() const { return FFile->GetFileSize(); }
-	virtual uint64       GetPos()  const { return FPosition; }
-	virtual bool         Eof() const         { return ( FPosition >= FFile->GetFileSize() ); }
+	virtual uint64_t get_size() const { return file->get_filesize(); }
+	virtual uint64_t get_pos()  const { return position; }
+	virtual bool eof() const { return ( position >= file->get_filesize() ); }
 
-	virtual const ubyte* MapStream()   const { return FFile->GetFileData(); }
-	virtual const ubyte* MapStreamFromCurrentPos() const { return ( FFile->GetFileData() + FPosition ); }
+	virtual const char* map_stream() const { return file->get_filedata(); }
+	virtual const char* map_stream_from_current_position() const { return ( file->get_filedata() + position ); }
 
-	virtual std::string ReadLine()
+	virtual std::string read_line()
 	{
 		const size_t MAX_LINE_WIDTH = 65535;
 
-		char Buf[ MAX_LINE_WIDTH + 1 ];
+		char buf[ MAX_LINE_WIDTH + 1 ];
 
-		const ubyte* C = MapStreamFromCurrentPos();
-		char* Out      = Buf;
-		char* End      = Buf + MAX_LINE_WIDTH;
+		const char* position_placeholder = map_stream_from_current_position();
+		char* out = buf;
+		char* end = buf + MAX_LINE_WIDTH;
 
-		while ( !Eof() && Out < End )
+		while ( !eof() && out < end )
 		{
-			FPosition++;
+			position_placeholder++;
 
-			char Ch = ( *C++ );
+			char C = ( *current_position++ );
+:%s/
+			if ( C == 13   ) { continue; }   // kill char
 
-			if ( Ch == 13   ) { continue; }   // kill char
+			if ( C == 10   ) { break; }
 
-			if ( Ch == 10   ) { break; }
-
-			*Out++ = Ch;
+			*out++ = C;
 		}
 
-		( *Out ) = 0;
+		( *out ) = 0;
 
-		return std::string( Buf );
+		return std::string( buf );
 	}
 
 private:
-	clPtr<iRawFile> FFile;
-	uint64          FPosition;
+	refcounting_ptr<intrusive_rawfile> file;
+	uint64_t position;
 };
 
-class FileWriter: public iOStream
+class file_writer: public intrusive_outstream
 {
 public:
-	FileWriter(): FPosition( 0 ) {}
-	virtual ~FileWriter() { Close(); }
+	file_writer(): position( 0 ) {}
+	virtual ~file_writer() { close(); }
 
-	bool Open( const std::string& FileName )
+	bool open( const std::string& file_name )
 	{
-		FFileName = FileName;
-#ifdef _WIN32
-		FMapFile = CreateFile( FFileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL,
-		                       CREATE_ALWAYS,
-		                       FILE_ATTRIBUTE_NORMAL, NULL );
-
-		return !( FMapFile == ( void* )INVALID_HANDLE_VALUE );
-#else
-		FMapFile = open( FFileName.c_str(), O_WRONLY | O_CREAT );
-		FPosition = 0;
-		return !( FMapFile == -1 );
-#endif
+		filename = file_name;
+		mapped_file = open( filename.c_str(), O_WRONLY | O_CREAT );
+		position = 0;
+		return !( mapped_file == -1 );
 	}
 
-	void Close()
+	void close()
 	{
-#ifdef _WIN32
-		CloseHandle( FMapFile );
-#else
 
-		if ( FMapFile != -1 ) { close( FMapFile ); }
+		if ( mapped_file != -1 ) { close( mapped_file ); }
 
-#endif
 	}
 
-	virtual std::string GetFileName() const { return FFileName; }
-	virtual uint64      GetFilePos() const { return FPosition; }
-	virtual void        Seek( const uint64 Position )
+	virtual std::string get_filename() const { return filename; }
+	virtual uint64_t get_file_position() const { return position; }
+	virtual void seek( const uint64_t seek_position )
 	{
-#ifdef _WIN32
-		SetFilePointerEx( FMapFile, *reinterpret_cast<const LARGE_INTEGER*>( &Position ), NULL, FILE_BEGIN );
-#else
 
-		if ( FMapFile != -1 ) { lseek( FMapFile, Position, SEEK_SET ); }
-
-#endif
-		FPosition = Position;
+		if ( mapped_file != -1 ) { lseek( mapped_file, seek_position, SEEK_SET ); }
+		position = seek_position;
 	}
 
-	virtual uint64      Write( const void* Buf, const uint64 Size )
+	virtual uint64_t write( const void* buf, const uint64_t Size )
 	{
-#ifdef _WIN32
-		DWORD written;
-		WriteFile( FMapFile, Buf, DWORD( Size ), &written, NULL );
-#else
 
-		if ( FMapFile != -1 ) { write( FMapFile, Buf, Size ); }
+		if ( mapped_file != -1 ) { write( mapped_file, buf, Size ); }
 
-#endif
-		FPosition += Size;
+		position += Size;
 		return Size;
 	}
 
 private:
-	std::string FFileName;
-#ifdef _WIN32
-	HANDLE FMapFile;
-#else
-	int    FMapFile;
-#endif
-	uint64    FPosition;
+	std::string filename;
+
+	int mapped_file;
+
+	uint64_t position;
 };
 
-/// File writer for some dynamically-sized clBlob
-class MemFileWriter: public iOStream
+/// File writer for some dynamically-sized blob
+class memoryfile_writer: public intrusive_outstream
 {
 public:
-	MemFileWriter( clPtr<clBlob> Container ): FPosition( 0 ), FMaxSize(), FContainer( Container ), FFileName( "" ) {}
-	virtual ~MemFileWriter() {}
+	memoryfile_writer( refcounting_ptr<blob> container_init ): position( 0 ), maxsize(), container( container_init ), filename( "" ) {}
+	virtual ~memoryfile_writer() {}
 
-	virtual void SetFileName( const std::string& FName ) { FFileName = FName; }
-	virtual std::string GetFileName() const { return FFileName; }
-	virtual uint64 GetFilePos() const { return FPosition; }
+	virtual void set_filename( const std::string& name ) { filename = name; }
+	virtual std::string get_filename() const { return filename; }
+	virtual uint64_t get_file_position() const { return position; }
 
 	/// Get/Set maximum allowed size for the in-mem file
-	uint64 GetMaxSize() const { return FMaxSize; }
-	void   SetMaxSize( uint64 MaxSize ) { FMaxSize = MaxSize; }
+	uint64_t get_maxsize() const { return maxsize; }
+	void set_maxsize( uint64_t maxsize_arg ) { maxsize = maxsize_arg; }
 
-	/// Change absolute file position to Position
-	virtual void    Seek( const uint64 Position )
+	/// change absolute file position to seek_position
+	virtual void seek( const uint64_t seek_position )
 	{
-		if ( Position > FContainer->GetSize() )
+		if ( seek_position > container->get_size() )
 		{
-			/// Check for oversize
-			if ( Position > FMaxSize - 1 ) { return; }
+			/// check for oversize
+			if ( seek_position > maxsize - 1 ) { return; }
 
-			/// Resize the clBlob
-			if ( !FContainer->SafeResize( static_cast<size_t>( Position ) + 1 ) ) { return; }
+			/// Resize the blob
+			if ( !container->safe_resize( static_cast<size_t>( seek_position ) + 1 ) ) { return; }
 		}
 
-		FPosition = Position;
+		position = seek_position;
 	}
 
-	/// Write Size bytes from Buf
-	virtual uint64    Write( const void* Buf, const uint64 Size )
+	/// Write Size bytes from buf
+	virtual uint64_t write( const void* buf, const uint64_t size )
 	{
-		uint64 ThisPos = FPosition;
+		uint64_t this_pos = position;
 
 		/// Ensure there is enough space
-		Seek( ThisPos + Size );
+		seek( this_pos + size );
 
-		if ( FPosition + Size > FMaxSize ) { return 0; }
+		if ( position + size > maxsize ) { return 0; }
 
-		void* DestPtr = ( void* )( &( ( ( ubyte* )( FContainer->GetData() ) )[ThisPos] ) );
+		void* destination_ptr = ( void* )( &( ( ( char* )( container->get_data() ) )[this_pos] ) );
 
 		/// Write the data
-		memcpy( DestPtr, Buf, static_cast<size_t>( Size ) );
+		memcpy( destination_ptr, buf, static_cast<size_t>( size ) );
 
-		return Size;
+		return size;
 	}
 
 	/// Access internal data container
-	clPtr<clBlob> GetContainer() const { return FContainer; }
-	void          SetContainer( const clPtr<clBlob>& B ) { FContainer = B; }
+	refcounting_ptr<blob> get_container() const { return container; }
+	void set_container( const refcounting_ptr<blob>& B ) { container = B; }
 private:
 	/// Actual file contents
-	clPtr<clBlob> FContainer;
+	refcounting_ptr<blob> container;
 	/// Maximum allowable size
-	uint64 FMaxSize;
+	uint64_t maxsize;
 	/// Virtual file name
-	std::string FFileName;
+	std::string filename;
 	/// Current position
-	uint64 FPosition;
+	uint64_t position;
 };

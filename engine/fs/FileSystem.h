@@ -4,48 +4,48 @@
 
 #include <vector>
 
-class iMountPoint;
+class intrusive_mountpoint;
 
-class clFileSystem: public iObject
+class filesystem: public intrusive_object
 {
 public:
-	clFileSystem() {}
-	virtual ~clFileSystem() {}
+	filesystem() {}
+	virtual ~filesystem() {}
 
-	clPtr<iIStream> CreateReader( const std::string& FileName ) const;
-	clPtr<iIStream> ReaderFromString( const std::string& Str ) const;
-	clPtr<iIStream> ReaderFromMemory( const void* BufPtr, uint64 BufSize, bool OwnsData ) const;
-	clPtr<iIStream> ReaderFromBlob( const clPtr<clBlob>& Blob ) const;
+	refcounting_ptr<intrusive_inputstream> create_reader( const std::string& filename ) const;
+	refcounting_ptr<intrusive_inputstream> from_from_string( const std::string& str ) const;
+	refcounting_ptr<intrusive_inputstream> reader_from_memory( const void* buffer_ptr, uint64_t buffer_size, bool owns_data ) const;
+	refcounting_ptr<intrusive_inputstream> reader_from_blob( const refcounting_ptr<blob>& Blob ) const;
 
-	clPtr<clBlob> LoadFileAsBlob( const std::string& FName ) const
+	refcounting_ptr<blob> LoadFileAsBlob( const std::string& name ) const
 	{
-		clPtr<iIStream> input = CreateReader( FName );
-		clPtr<clBlob> Res = new clBlob();
-		Res->CopyMemoryBlock( input->MapStream(), ( size_t )input->GetSize() );
-		return Res;
+	refcounting_ptr<intrusive_inputstream> input = create_reader( name );
+	refcounting_ptr<blob> resource = new blob();
+	resource->copy_memoryblock( input->map_stream(), ( size_t )input->get_size() );
+	return resource;
 	}
 
-	void        Mount( const std::string& PhysicalPath );
-	void        AddAliasMountPoint( const std::string& SrcPath, const std::string& AliasPrefix );
-	void        AddMountPoint( const clPtr<iMountPoint>& MP );
+	void mount( const std::string& physical_path );
+	void add_alias_mountpoint( const std::string& src_path, const std::string& alias_prefix );
+	void add_mountpoint( const refcounting_ptr<intrusive_mountpoint>& MP );
 
-	std::string VirtualNameToPhysical( const std::string& Path ) const;
-	bool        FileExists( const std::string& Name ) const;
+	std::string virtual_name_to_physical( const std::string& path ) const;
+	bool file_exists( const std::string& name ) const;
 private:
-	clPtr<iMountPoint> FindMountPointByName( const std::string& ThePath );
+	refcounting_ptr<intrusive_mountpoint> find_mountpoint_by_name( const std::string& path );
 	/// Search for a mount point for this file
-	clPtr<iMountPoint>  FindMountPoint( const std::string& FileName ) const;
-	std::vector< clPtr<iMountPoint> > FMountPoints;
+	refcounting_ptr<intrusive_mountpoint> find_mountpoint( const std::string& filename ) const;
+	std::vector< refcounting_ptr<intrusive_mountpoint> > mountpoints;
 };
 
-inline clPtr<MemFileWriter> CreateMemWriter( const std::string& FileName, uint64 InitialSize )
+inline refcounting_ptr<memfile_writer> create_memwriter( const std::string& filename, uint64_t initial_size )
 {
-	clPtr<clBlob> B = new clBlob();
-	B->SetSize( static_cast<size_t>( InitialSize ) );
+	refcounting_ptr<blob> B = new blob();
+	B->set_size( static_cast<size_t>( initial_size ) );
 
-	clPtr<MemFileWriter> Stream = new MemFileWriter( B );
-	Stream->SetMaxSize( InitialSize * 2 ); // default value
-	Stream->SetFileName( FileName );
+	refcounting_ptr<memfile_writer> stream = new memfile_writer( B );
+	stream->set_maxsize( initial_size * 2 ); // default value
+	stream->set_filename( filename );
 
-	return Stream;
+	return stream;
 }

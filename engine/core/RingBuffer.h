@@ -2,42 +2,48 @@
 #include <vector>
 
 /// Division remainder (wrap around for negative values)
-inline int ModInt( int a, int b )
+inline int mod_int( int a, int b )
 {
 	int r = a % b;
 	return ( r < 0 ) ? r + b : r;
 }
 
 // typesafe circular buffer
-template <typename T> class RingBuffer
+template <typename T> class ring_buffer
 {
 public:
-	explicit RingBuffer( size_t Capacity ): FBuffer( Capacity )
-	{ clear(); }
+	explicit ring_buffer(size_t capacity): frame_buffer(capacity) { clear(); }
 
-	inline void    push_back( const T& Value )
+	inline void push_back(const T& Value)
 	{
-		if ( FCount < FBuffer.size() ) { FCount++; }
+		if (frame_count < frame_buffer.size())
+			frame_count++;
 
 		// fill linear buffer
-		FBuffer[ FHead++ ] = Value;
+		frame_buffer[frame_head++] = Value;
 
 		// wrap around
-		if ( FHead == FBuffer.size() ) { FHead = 0; }
+		if (frame_head == frame_buffer.size())
+			frame_head = 0;
 	}
 
-	inline void clear() { FCount = FHead  = 0; }
-
-	inline T* prev( size_t i )
+	inline void clear()
 	{
-		return ( i >= FCount ) ? NULL : &FBuffer[ AdjustIndex( i ) ];
+		frame_count = frame_head  = 0;
 	}
 
-	inline size_t AdjustIndex( size_t i ) const
+	inline T* prev(size_t i)
 	{
-		return ( size_t )ModInt( ( int )FHead - ( int )i - 1, ( int )FBuffer.size() );
+		return ( i >= frame_count ) ? NULL : &frame_buffer[ adjust_index( i ) ];
 	}
+
+	inline size_t adjust_index(size_t i) const
+	{
+		return (size_t)mod_int((int)frame_head - (int)i - 1, (int)frame_buffer.size());
+	}
+
 private:
-	std::vector<T> FBuffer;
-	size_t     FCount, FHead;
+	// note: This does NOT necessarily mean a video frame buffer. Keep in mind this is for any kind of buffer forwarding frames of information.
+	std::vector<T> frame_buffer;
+	size_t     frame_count, frame_head;
 };

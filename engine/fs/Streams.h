@@ -1,39 +1,39 @@
 #pragma once
 
-#include "iObject.h"
+#include "IntrusiveObject.h"
 #include <string>
 
 /// Input stream
-class iIStream: public iObject
+class intrusive_input_stream: public intrusive_object
 {
 public:
-	iIStream() {}
-	virtual ~iIStream() {}
-	virtual std::string GetVirtualFileName() const = 0;
-	virtual std::string GetFileName() const = 0;
-	virtual void   Seek( const uint64 Position ) = 0;
-	virtual uint64 Read( void* Buf, uint64 Size ) = 0;
-	virtual bool   Eof() const = 0;
-	virtual uint64 GetSize() const = 0;
-	virtual uint64 GetPos() const = 0;
-	virtual uint64 GetBytesLeft() const { return GetSize() - GetPos(); };
+	intrusive_input_stream() {}
+	virtual ~intrusive_input_stream() {}
+	virtual std::string get_virtual_file_name() const = 0;
+	virtual std::string get_filename() const = 0;
+	virtual void seek( const uint64_t Position ) = 0;
+	virtual uint64_t read( void* buffer, uint64_t size ) = 0;
+	virtual bool eof() const = 0;
+	virtual uint64_t get_size() const = 0;
+	virtual uint64_t get_pos() const = 0;
+	virtual uint64_t get_bytes_left( const { return get_size() - get_pos(); };
 
 	/// Return pointer to the shared memory corresponding to this file
-	virtual const ubyte*  MapStream() const = 0;
+	virtual const char* map_stream() const = 0;
 	/// Return pointer to the shared memory corresponding to the current position in this file
-	virtual const ubyte*  MapStreamFromCurrentPos() const = 0;
+	virtual const char* map_stream_from_current_pos() const = 0;
 
-	virtual std::string ReadLine() = 0;
+	virtual std::string readLine() = 0;
 };
 
 /// Output stream
-class iOStream: public iObject
+class intrusive_output_stream: public intrusive_object
 {
 public:
-	iOStream() {};
-	virtual ~iOStream() {};
-	virtual std::string GetFileName() const = 0;
-	virtual void   Seek( const uint64 Position ) = 0;
-	virtual uint64 GetFilePos() const = 0;
-	virtual uint64 Write( const void* Buf, const uint64 Size ) = 0;
+	intrusive_output_stream() {};
+	virtual ~intrusive_output_stream() {};
+	virtual std::string get_filename() const = 0;
+	virtual void seek( const uint64_t Position ) = 0;
+	virtual uint64_t get_file_pos() const = 0;
+	virtual uint64_t write( const void* buffer, const uint64_t size ) = 0;
 };
