@@ -10,7 +10,7 @@ engine/extern/*
 
 .git
 **/.git
-
+android.OLD
 android/jni/*
 desktop/*
 

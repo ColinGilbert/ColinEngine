@@ -1,6 +1,3 @@
-#ifndef DESKTOP
-#define DESKTOP
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -8,6 +5,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <memory>
+#include <list>
+
 #include <GLES3/gl3.h>
 #include <GLFW/glfw3.h>
 #include "platform_crap.h"
@@ -166,11 +166,9 @@ int main ()
 		{
 			glfwSetWindowShouldClose (g_window, 1);
 		}
-		frame_draw_callback(0, 0, g_gl_width, g_gl_height);
+		frame_draw_callback(g_gl_width, g_gl_height);
 		glfwSwapBuffers (g_window);
 	}
 	glfwTerminate();
 	return 0;
 }
-
-#endif

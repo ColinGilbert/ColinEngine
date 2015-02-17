@@ -1,0 +1,1 @@
+./clean && ./prep && cd android && ndk-build -j8 && ant debug install && cd ..

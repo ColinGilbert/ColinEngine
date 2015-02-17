@@ -1,0 +1,1 @@
+./clean && ./prep && ./build

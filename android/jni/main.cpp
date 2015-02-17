@@ -1,56 +1,37 @@
-//BEGIN_INCLUDE(all)
 #include <jni.h>
 #include <errno.h>
 
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
-#include "platform_crap.h"
-#include "user_callbacks.h"
-
-//#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity" ,__VA_ARGS__))
-//#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity" , __VA_ARGS__))
-
+#include <errno.h>
+#include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
 #include <android/sensor.h>
 #include <android/log.h>
 #include <android_native_app_glue.h>
 //#include <android/native_window.h>
-#include <time.h>
+#include <sys/types.h>
 
-#include <iostream>
+#include "platform_crap.h"
+#include "user_callbacks.h"
 
-#include "engine/fs/FileSystem.h"
+#include "ktx.h"
 
 
-
-//#include <time.h>
-
-/**
- * Our saved state data.
- */
-struct saved_state
-{
-	float angle;
-	int32_t x;
-	int32_t y;
-};
-
-/**
- * Shared state for our app.
- */
 struct engine 
 {
 	struct android_app* app;
 	ASensorManager* sensorManager;
 	const ASensor* accelerometerSensor;
 	ASensorEventQueue* sensorEventQueue;
+	AAssetManager* assetManager;
 	int animating;
 	EGLDisplay display;
 	EGLSurface surface;
 	EGLContext context;
 	int32_t width;
 	int32_t height;
-	struct saved_state state;
 };
 
 double get_time()
@@ -61,10 +42,8 @@ double get_time()
 	return curTimeInSeconds;
 }
 
-
 static int engine_init_display(struct engine* engine)
 {
-
 	const EGLint attribs[] = { EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_BLUE_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_RED_SIZE, 8, EGL_NONE };
 	EGLint w, h, dummy, format;
 	EGLint numConfigs;
@@ -79,12 +58,12 @@ static int engine_init_display(struct engine* engine)
 	eglChooseConfig(display, attribs, &config, 1, &numConfigs);
 	eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
 	ANativeWindow_setBuffersGeometry(engine->app->window, 0, 0, format);
-	surface = eglCreateWindowSurface(display, config, engine->app->window, NULL);
-	context = eglCreateContext(display, config, NULL, NULL);
+	surface = eglCreateWindowSurface(display, config, engine->app->window, 0);
+	context = eglCreateContext(display, config, 0, 0);
 
 	if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE)
 	{
-		LOGW("Unable to eglMakeCurrent");
+		LOG("Unable to eglMakeCurrent");
 		return -1;
 	}
 
@@ -96,26 +75,23 @@ static int engine_init_display(struct engine* engine)
 	engine->surface = surface;
 	engine->width = w;
 	engine->height = h;
-	engine->state.angle = 0;
 
 	renderer_start_callback(); 
 
 	return 0;
 }
 
-
 static void engine_draw_frame(struct engine* engine)
 {
-	if (engine->display == NULL)
+	if (engine->display == nullptr)
 	{
 		return;
 	}
 
-	frame_draw_callback(engine->state.x,engine->state.y,engine->width,engine->height);
+	frame_draw_callback(engine->width, engine->height);
 
 	eglSwapBuffers(engine->display, engine->surface);
 }
-
 
 static void engine_term_display(struct engine* engine)
 {
@@ -161,13 +137,11 @@ static void engine_handle_command(struct android_app* app, int32_t cmd)
 	switch (cmd)
 	{
 		case APP_CMD_SAVE_STATE:
-			engine->app->savedState = malloc(sizeof(struct saved_state));
-			*((struct saved_state*)engine->app->savedState) = engine->state;
-			engine->app->savedStateSize = sizeof(struct saved_state);
+			app_save_state_callback();
 			break;
 
 		case APP_CMD_INIT_WINDOW:
-			if (engine->app->window != NULL)
+			if (engine->app->window != nullptr)
 			{
 				engine_init_display(engine);
 				engine_draw_frame(engine);
@@ -179,7 +153,7 @@ static void engine_handle_command(struct android_app* app, int32_t cmd)
 			break;
 
 		case APP_CMD_GAINED_FOCUS:
-			if (engine->accelerometerSensor != NULL)
+			if (engine->accelerometerSensor != nullptr)
 			{
 				ASensorEventQueue_enableSensor(engine->sensorEventQueue, engine->accelerometerSensor);
 				ASensorEventQueue_setEventRate(engine->sensorEventQueue, engine->accelerometerSensor, (1000L/60)*1000);
@@ -189,22 +163,83 @@ static void engine_handle_command(struct android_app* app, int32_t cmd)
 			break;
 
 		case APP_CMD_LOST_FOCUS:
-			if (engine->accelerometerSensor != NULL)
+			if (engine->accelerometerSensor != nullptr)
 			{
 				ASensorEventQueue_disableSensor(engine->sensorEventQueue, engine->accelerometerSensor);
+				accelerometer_disable_callback();
 			}
 			engine_draw_frame(engine);
 			break;
 	}
 }
 
+AAssetManager * android_asset_manager;
+
+void read_apk_file( const char* file_name, char** raw_data, unsigned int* file_size )
+{
+	AAsset* android_apk_file = AAssetManager_open( android_asset_manager, file_name, AASSET_MODE_UNKNOWN );
+	if( android_apk_file != nullptr )
+	{
+		// Determine file size
+		off_t _file_size = AAsset_getLength( android_apk_file );
+		// Read data
+		char* _raw_data = (char*)malloc( _file_size );
+		AAsset_read( android_apk_file, _raw_data, _file_size );
+		// Allocate space for the file content
+		*raw_data = (char*)malloc( _file_size );
+		// Copy the content
+		memcpy( *raw_data, _raw_data, _file_size );
+		*file_size = _file_size;
+		free( _raw_data );
+		// Close the file
+		AAsset_close( android_apk_file );
+	}
+}
+
+GLuint load_etc_texture( const char* texture_file_name )
+{
+	char* raw_data = nullptr; 
+	unsigned int file_size = 0;
+
+	read_apk_file( texture_file_name, &raw_data, &file_size );
+
+	GLuint handle = 0;
+	GLenum target;
+	GLboolean mipmapped;
+
+	KTX_error_code result = ktxLoadTextureM( raw_data, file_size, &handle, &target, NULL, &mipmapped, NULL, NULL, NULL );
+
+	if( result != KTX_SUCCESS )
+	{
+		LOG( "KTXLib couldn't load texture %s. Error: %d", texture_file_name, result );
+		return 0;
+	}
+
+	glBindTexture( target, handle );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+
+	if( mipmapped )
+	{
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
+	}
+
+	free( raw_data );
+	return handle;
+}
+
+void android_pre_init_filesystem(struct android_app* state)
+{
+	ANativeActivity* activity;
+	activity = state->activity;
+	android_asset_manager = activity->assetManager;
+}
 
 void android_main(struct android_app* state)
 {
 	struct engine engine;
 	// Make sure glue isn't stripped.
 	app_dummy();
-
 	memset(&engine, 0, sizeof(engine));
 	state->userData = &engine;
 	state->onAppCmd = engine_handle_command;
@@ -212,25 +247,26 @@ void android_main(struct android_app* state)
 	engine.app = state;
 	engine.sensorManager = ASensorManager_getInstance();
 	engine.accelerometerSensor = ASensorManager_getDefaultSensor(engine.sensorManager, ASENSOR_TYPE_ACCELEROMETER);
-	engine.sensorEventQueue = ASensorManager_createEventQueue(engine.sensorManager, state->looper, LOOPER_ID_USER, NULL, NULL);
-	if (state->savedState != NULL)
-	{
-		engine.state = *(struct saved_state*)state->savedState;
-	}
+	engine.sensorEventQueue = ASensorManager_createEventQueue(engine.sensorManager, state->looper, LOOPER_ID_USER, 0, 0);
+
+	ANativeActivity* nativeActivity = state->activity;                              
+
+	android_pre_init_filesystem(state);
+
 	while (1)
 	{
 		int ident;
 		int events;
 		struct android_poll_source* source;
-		while ((ident=ALooper_pollAll(engine.animating ? 0 : -1, NULL, &events, (void**)&source)) >= 0)
+		while ((ident=ALooper_pollAll(engine.animating ? 0 : -1, 0, &events, (void**)&source)) >= 0)
 		{
-			if (source != NULL)
+			if (source != nullptr)
 			{
 				source->process(state, source);
 			}
 			if (ident == LOOPER_ID_USER)
 			{
-				if (engine.accelerometerSensor != NULL)
+				if (engine.accelerometerSensor != nullptr)
 				{
 					ASensorEvent event;
 					while (ASensorEventQueue_getEvents(engine.sensorEventQueue, &event, 1) > 0)
@@ -251,4 +287,3 @@ void android_main(struct android_app* state)
 		}
 	}
 }
-
