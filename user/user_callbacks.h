@@ -10,20 +10,72 @@
  * They hook into calls from the target platform; these functions are basically signals that events have ocurred at the UI and OS levels.
  *
  */
-#include <memory>
-#include <list>
-//#include "stb_image.h"
+
+#include <stdio.h>
+
+#include "nanovg.h"
+#define NANOVG_GLES3_IMPLEMENTATION
+#include "nanovg_gl.h"
+#include "nanovg_gl_utils.h"
 
 
-/* ---------- Externs/call-forwards ----------- */
+NVGcontext* vg = NULL;
+
+class Texture
+{
+	public:
+		Texture(GLuint _handle, unsigned short _height, unsigned short _width , unsigned short _mips)
+		{
+			handle = _handle;
+			height = _height;
+			width = _width;
+			mips = _mips;
+		}
+
+		~Texture() = default;
+		GLuint get_handle() { return handle; }
+		unsigned short get_height() { return height; }
+		unsigned short get_width() { return width; }
+
+	protected:
+		GLuint handle;
+		unsigned short height,width,mips;
+};
+
+
+typedef struct
+{
+	unsigned char IdSize,
+		      MapType,
+		      ImageType;
+	unsigned short PaletteStart,
+		       PaletteSize;
+	unsigned char PaletteEntryDepth;
+	unsigned short X,
+		       Y,
+		       Width,
+		       Height;
+	unsigned char ColorDepth,
+		      Descriptor;
+} TGA_HEADER;
+
+
+
+/* --------------- Externs -------------- */
+
+extern char * load_tga(const char * name, unsigned short* width, unsigned short* height);
 
 extern double get_time();
+
 extern void exit_app();
-extern GLuint load_texture(const std::string& name); 
 
 /* ---------- Callbacks ---------- */
 
-void app_init_callback() {}
+
+
+void app_init_callback()
+{
+}
 void app_save_state_callback() {}
 void app_exit_callback() {}
 void renderer_init_callback()
@@ -32,6 +84,9 @@ void renderer_init_callback()
 	const GLubyte* version = glGetString(GL_VERSION);
 //	LOG("Renderer: %s\n", renderer);
 //	LOG("OpenGL version supported %s\n", version);
+//
+	unsigned short w, h;
+	char * tex_data = load_tga("romeo.tga",&w,&h);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);

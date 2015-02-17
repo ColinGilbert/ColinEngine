@@ -13,10 +13,13 @@ LOCAL_C_INCLUDES :=$(LOCAL_PATH)/engine \
 	$(LOCAL_PATH)/engine/core \
 	$(LOCAL_PATH)/engine/sound \
 	$(LOCAL_PATH)/engine/threading \
-	$(LOCAL_PATH)/engine/extern/nanovg/src \
-	$(LOCAL_PATH)/engine/extern/KTX
+	$(LOCAL_PATH)/engine/extern/nanovg/src
+
 
 LOCAL_SRC_FILES  := main.cpp \
+	engine/extern/nanovg/src/nanovg.c
+
+#\
 	engine/extern/KTX/checkheader.c \
 	engine/extern/KTX/hashtable.c  \
 	engine/extern/KTX/loader.c \
@@ -24,9 +27,11 @@ LOCAL_SRC_FILES  := main.cpp \
 	engine/extern/KTX/writer.c \
 	engine/extern/KTX/etcunpack.cxx\
 	engine/extern/KTX/etcdec.cxx \
-	engine/extern/KTX/errstr.c
+	engine/extern/KTX/errstr.c \
 
-LOCAL_LDLIBS     := -llog -landroid -lEGL -lGLESv3
+	
+
+LOCAL_LDLIBS := -llog -landroid -lEGL -lGLESv3
 LOCAL_STATIC_LIBRARIES := android_native_app_glue
 
 include $(BUILD_SHARED_LIBRARY)

@@ -13,11 +13,122 @@
 //#include <android/native_window.h>
 #include <sys/types.h>
 
+#include <vector>
 #include "platform_crap.h"
 #include "user_callbacks.h"
 
-#include "ktx.h"
+// Ugly hack for now...
+AAssetManager* android_asset_manager;
 
+void android_pre_init_filesystem(struct android_app* state)
+{
+	ANativeActivity* activity;
+	activity = state->activity;
+	android_asset_manager = activity->assetManager;
+}
+
+double get_time()
+{
+	struct timespec clockRealTime;
+	clock_gettime( CLOCK_MONOTONIC, &clockRealTime );
+	double curTimeInSeconds = clockRealTime.tv_sec + ( double ) clockRealTime.tv_nsec / 1e9;
+	return curTimeInSeconds;
+}
+
+AAsset* open_file(AAssetManager * am, const char* file_name)
+{
+	AAsset* pFile = NULL;
+
+	if (am != NULL)
+	{
+		pFile = AAssetManager_open(am, file_name, AASSET_MODE_BUFFER);
+	}
+
+	return pFile;
+}
+
+void close_file(AAsset* pFile)
+{
+	if (pFile != NULL)
+	{
+
+		AAsset_close(pFile);
+
+	}
+}
+
+int read_file(AAsset* pFile, int bytesToRead, void* buffer)
+{
+	int bytes_read = 0;
+	if (pFile == NULL)
+	{
+		return bytes_read;
+	}
+
+	bytes_read = AAsset_read(pFile, buffer, bytesToRead);
+
+	return bytes_read;
+}
+
+int read_whole_file(AAsset* pFile, char* buffer)
+{
+	int bytes_read = 0;
+	if (pFile == NULL)
+	{
+		return bytes_read;
+	}
+	off_t length = AAsset_getLength(pFile);
+	buffer = (char *)malloc(length);
+	bytes_read = AAsset_read(pFile,buffer,length);
+	return bytes_read;
+}
+
+char* android_load_tga(AAssetManager* am, const char* file_name, unsigned short* width, unsigned short* height)
+{
+	char* buffer;
+	AAsset* fp;
+	TGA_HEADER header;
+	int bytes_read;
+	// Open the file for reading
+	fp = open_file(am, file_name);
+	if (fp == NULL)
+	{
+		return NULL;
+	}
+	bytes_read = read_file(fp, sizeof(TGA_HEADER), &header);
+	*width = header.Width;
+	*height = header.Height;
+	if (header.ColorDepth == 8 || header.ColorDepth == 24 || header.ColorDepth == 32)
+	{
+		int bytesToRead = sizeof(char) * (*width) * (*height) * header.ColorDepth / 8;
+		// Allocate the image data buffer
+		buffer = (char *)malloc(bytesToRead);
+		if (buffer)
+		{
+			bytes_read = read_file(fp, bytesToRead, buffer);
+			close_file (fp);
+			return (buffer);
+		}
+	}
+	return (NULL);
+}
+
+int load_file_into_mem(const char* file_name, char* data)
+{
+	AAsset* fp = open_file(android_asset_manager, file_name);
+	if (fp == NULL)
+	{
+		return 0;
+	}
+	int bytes_read = read_whole_file(fp, data);
+	return bytes_read;
+	
+}
+
+char* load_tga(const char* file_name, unsigned short* width, unsigned short* height)
+{
+	return android_load_tga(android_asset_manager, file_name, width, height);
+}
 
 struct engine 
 {
@@ -33,14 +144,6 @@ struct engine
 	int32_t width;
 	int32_t height;
 };
-
-double get_time()
-{
-	struct timespec clockRealTime;
-	clock_gettime( CLOCK_MONOTONIC, &clockRealTime );
-	double curTimeInSeconds = clockRealTime.tv_sec + ( double ) clockRealTime.tv_nsec / 1e9;
-	return curTimeInSeconds;
-}
 
 static int engine_init_display(struct engine* engine)
 {
@@ -95,7 +198,6 @@ static void engine_draw_frame(struct engine* engine)
 
 static void engine_term_display(struct engine* engine)
 {
-
 	if (engine->display != EGL_NO_DISPLAY)
 	{
 		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -115,7 +217,6 @@ static void engine_term_display(struct engine* engine)
 	engine->surface = EGL_NO_SURFACE;
 
 	renderer_destroy_callback();
-
 }
 
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event)
@@ -171,68 +272,6 @@ static void engine_handle_command(struct android_app* app, int32_t cmd)
 			engine_draw_frame(engine);
 			break;
 	}
-}
-
-AAssetManager * android_asset_manager;
-
-void read_apk_file( const char* file_name, char** raw_data, unsigned int* file_size )
-{
-	AAsset* android_apk_file = AAssetManager_open( android_asset_manager, file_name, AASSET_MODE_UNKNOWN );
-	if( android_apk_file != nullptr )
-	{
-		// Determine file size
-		off_t _file_size = AAsset_getLength( android_apk_file );
-		// Read data
-		char* _raw_data = (char*)malloc( _file_size );
-		AAsset_read( android_apk_file, _raw_data, _file_size );
-		// Allocate space for the file content
-		*raw_data = (char*)malloc( _file_size );
-		// Copy the content
-		memcpy( *raw_data, _raw_data, _file_size );
-		*file_size = _file_size;
-		free( _raw_data );
-		// Close the file
-		AAsset_close( android_apk_file );
-	}
-}
-
-GLuint load_etc_texture( const char* texture_file_name )
-{
-	char* raw_data = nullptr; 
-	unsigned int file_size = 0;
-
-	read_apk_file( texture_file_name, &raw_data, &file_size );
-
-	GLuint handle = 0;
-	GLenum target;
-	GLboolean mipmapped;
-
-	KTX_error_code result = ktxLoadTextureM( raw_data, file_size, &handle, &target, NULL, &mipmapped, NULL, NULL, NULL );
-
-	if( result != KTX_SUCCESS )
-	{
-		LOG( "KTXLib couldn't load texture %s. Error: %d", texture_file_name, result );
-		return 0;
-	}
-
-	glBindTexture( target, handle );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-
-	if( mipmapped )
-	{
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
-	}
-
-	free( raw_data );
-	return handle;
-}
-
-void android_pre_init_filesystem(struct android_app* state)
-{
-	ANativeActivity* activity;
-	activity = state->activity;
-	android_asset_manager = activity->assetManager;
 }
 
 void android_main(struct android_app* state)
