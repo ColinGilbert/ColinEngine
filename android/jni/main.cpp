@@ -13,7 +13,6 @@
 //#include <android/native_window.h>
 #include <sys/types.h>
 
-#include <vector>
 #include "platform_crap.h"
 #include "user_callbacks.h"
 
@@ -70,7 +69,7 @@ int read_file(AAsset* pFile, int bytesToRead, void* buffer)
 	return bytes_read;
 }
 
-int read_whole_file(AAsset* pFile, char* buffer)
+int read_whole_file(AAsset* pFile, void* buffer)
 {
 	int bytes_read = 0;
 	if (pFile == NULL)
@@ -113,7 +112,7 @@ char* android_load_tga(AAssetManager* am, const char* file_name, unsigned short*
 	return (NULL);
 }
 
-int load_file_into_mem(const char* file_name, char* data)
+int load_file_into_mem(const char* file_name, void* data)
 {
 	AAsset* fp = open_file(android_asset_manager, file_name);
 	if (fp == NULL)
